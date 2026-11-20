@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="CICSight is a BAT 405 prototype for college-level academic planning and review of Student Evaluation of Teaching Effectiveness results.">
+<title>CICSight | Dean’s Academic Dashboard</title>
+<style>
+:root {
+  color-scheme: light;
+  --ink: #192a3b;
+  --navy: #253e55;
+  --muted: #4f6070;
+  --rule: #d7dee5;
+  --outline: #8997a4;
+  --surface: #ffffff;
+  --paper: #f5f7f9;
+  --shade: #e8edf2;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+header { background: var(--surface); border-bottom: 1px solid var(--rule); }
+.wrap { max-width: 1260px; margin: auto; padding-inline: 32px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 59px; }
+.brand { color: var(--navy); font-size: 22px; font-weight: 700; letter-spacing: -.025em; }
+button, select { font: inherit; border: 1px solid var(--outline); border-radius: 4px; background: var(--surface); color: var(--ink); min-height: 38px; padding: 7px 10px; }
+button { cursor: pointer; font-weight: 600; }
+button:hover { background: var(--shade); }
+:focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; }
+
+main.wrap { padding-block: 24px; }
+p, h1, h2 { margin: 0; }
+.intro { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 18px; }
+.college, .sub, .tag, .chart-note, footer { color: var(--muted); }
+.college { font-size: 13px; margin-bottom: 2px; }
+h1 { font-size: clamp(26px, 4vw, 37px); line-height: 1.2; letter-spacing: -.035em; margin-bottom: 4px; }
+.tag { white-space: nowrap; font-size: 12px; font-weight: 600; }
+.filterbar { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 16px; }
+label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+select { min-width: 136px; width: 100%; cursor: pointer; }
+#program { min-width: 220px; }
+.print-scope { display: none; }
+
+.alert { border: 1px solid var(--rule); background: var(--shade); border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; }
+.alert.clear { background: var(--surface); }
+.alert strong { display: block; }
+.alert ul { margin: 3px 0 0; padding-left: 18px; }
+.kpis, .charts { display: grid; gap: 10px; }
+.kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 14px; }
+.charts { grid-template-columns: 1fr 1fr 1.2fr; }
+.card, .panel { min-width: 0; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); padding: 14px; }
+.card h2 { font-size: 13px; line-height: 1.3; }
+.source, .context { display: block; color: var(--muted); font-size: 11px; }
+.source { margin-top: 2px; }
+.value { font-size: clamp(24px, 3vw, 32px); font-weight: 700; letter-spacing: -.035em; line-height: 1.12; margin: 9px 0 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.state { color: var(--muted); font-size: 11px; }
+.state.review { color: var(--ink); font-weight: 700; }
+.context { margin-top: 2px; }
+.panel h2 { font-size: 15px; line-height: 1.25; }
+.chart-note { font-size: 12px; margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 10px 0 9px; color: var(--muted); font-size: 11px; }
+.chip { display: inline-block; width: 9px; height: 9px; margin-right: 4px; background: var(--navy); }
+.chip.capacity, .fill.capacity { background: transparent; border: 1px solid var(--outline); }
+.chip.threshold { width: 4px; background: transparent; border-left: 1px dashed var(--muted); }
+.course-row { display: grid; grid-template-columns: 50px minmax(0, 1fr) 56px; gap: 6px; align-items: center; font-size: 11px; }
+.course-row + .course-row { margin-top: 10px; }
+.course-row strong { white-space: nowrap; }
+.course-row span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.course-row.below span:last-child { font-weight: 700; }
+.track { min-width: 0; display: grid; gap: 3px; position: relative; }
+.fill { height: 7px; width: var(--amount); background: var(--navy); }
+.track.pass { background: var(--shade); }
+.pass::after { content: ""; position: absolute; left: 85%; inset-block: -3px; border-left: 1px dashed var(--outline); }
+.axis { display: flex; justify-content: space-between; margin: 5px 62px 0 56px; color: var(--muted); font-size: 10px; }
+.sete-dimension { margin-top: 6px; }
+.sete-dimension select { min-height: 31px; padding-block: 4px; }
+canvas { display: block; width: 100%; height: 101px; margin-top: 3px; }
+.trend-values { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; text-align: center; font-size: 11px; line-height: 1.3; }
+.trend-values strong, .trend-values small { display: block; }
+.trend-values small { color: var(--muted); }
+footer { font-size: 12px; margin-top: 15px; }
+footer p + p { margin-top: 3px; }
+
+@media (max-width: 940px) {
+  .charts { grid-template-columns: 1fr 1fr; }
+  .charts > :last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 700px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .wrap { padding-inline: 15px; }
+  .intro { display: block; }
+  .tag { display: block; margin-top: 6px; }
+  .charts { grid-template-columns: 1fr; }
+}
+@page { size: 13in 8.5in; margin: .36in; }
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: var(--surface); font-size: 12px; zoom: .86; }
+  .wrap { max-width: none; padding-inline: 0; }
+  .topbar { min-height: 39px; }
+  main.wrap { padding-block: 12px 0; }
+  .intro { display: flex; margin-bottom: 8px; }
+  h1 { font-size: 27px; }
+  .print, .filterbar select, .sete-dimension select { display: none; }
+  .print-scope { display: inline; font-weight: 600; }
+  .filterbar, .alert, .kpis { margin-bottom: 8px; }
+  .kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .charts { grid-template-columns: 1fr 1fr 1.2fr; }
+  .charts > :last-child { grid-column: auto; }
+  .panel, .card { padding: 10px; break-inside: avoid; }
+  canvas { height: 90px; }
+  .value { font-size: 26px; }
+  footer { margin-top: 9px; }
+}
+
+/* Report layout */
+header { background: transparent; border: 0; }
+.topbar { min-height: 64px; }
+.brand { color: var(--navy); font-size: 21px; }
+.print { border-color: var(--rule); border-radius: 8px; }
+.masthead .intro {
+  align-items: end;
+  margin: 0;
+  padding: 21px 24px;
+  border-radius: 17px;
+  background: #23384a;
+  color: var(--surface);
+}
+.intro .college, .intro .sub, .intro .tag { color: #dce5ed; }
+.intro .college { margin-bottom: 5px; }
+.intro h1 { font-size: clamp(27px, 4vw, 41px); font-weight: 650; margin-bottom: 6px; }
+.intro .tag { font-size: 12px; }
+
+main.wrap { padding-block: 19px 24px; }
+.filterbar { gap: 10px 15px; margin-bottom: 18px; }
+.filterbar label { flex: 1 1 125px; max-width: 163px; }
+.filterbar label:last-child { flex-basis: 225px; max-width: 273px; }
+select { border-color: var(--rule); border-radius: 8px; }
+select:hover { border-color: var(--outline); }
+.filterbar select, #program { min-width: 0; }
+
+.kpis {
+  gap: 14px 12px;
+  padding: 17px 18px;
+  border: 1px solid var(--rule);
+  border-radius: 13px;
+  background: var(--surface);
+  margin-bottom: 13px;
+}
+.kpis .card { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.card .value { margin-block: 7px 5px; font-size: clamp(25px, 3vw, 33px); }
+.state, .context { font-size: 12px; }
+.alert {
+  display: grid;
+  grid-template-columns: minmax(0, 155px) minmax(0, 1fr);
+  gap: 3px 12px;
+  align-items: start;
+  padding: 11px 15px;
+  border: 0;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.alert ul { margin: 0; }
+.alert.clear { background: var(--shade); }
+
+.charts { grid-template-columns: 1fr 1fr; gap: 14px; }
+.charts > .panel { padding: 16px 18px; border-radius: 13px; }
+.portal-charts { display: grid; align-content: start; gap: 16px; }
+.portal-charts section + section { border-top: 1px solid var(--rule); padding-top: 13px; }
+.charts .panel h2 { font-size: 16px; font-weight: 650; }
+.charts .legend { margin: 7px 0 7px; }
+.course-row { grid-template-columns: 56px minmax(0, 1fr) 66px; font-size: 12px; }
+.course-row + .course-row { margin-top: 8px; }
+.fill { height: 8px; border-radius: 3px; }
+.track.pass { border-radius: 3px; }
+.axis { margin-inline: 62px 72px; }
+.sete-dimension { margin-top: 8px; max-width: 220px; }
+canvas { height: 148px; margin-top: 7px; }
+.trend-values { margin-top: 5px; gap: 8px; }
+.trend-values li { padding: 7px 2px; border-radius: 7px; background: var(--paper); }
+.trend-values span { font-size: 16px; font-weight: 650; }
+.trend-values small { margin-top: 2px; }
+
+@media screen and (max-width: 940px) {
+  .charts > :last-child { grid-column: auto; }
+}
+@media screen and (max-width: 760px) {
+  .charts { grid-template-columns: minmax(0, 1fr); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px 11px; }
+  .alert { grid-template-columns: minmax(0, 1fr); }
+}
+@media screen and (max-width: 620px) {
+  .topbar { min-height: 57px; }
+  .masthead .intro { padding: 14px 15px; border-radius: 13px; }
+  .filterbar label, .filterbar label:last-child { max-width: none; }
+  .charts > .panel { padding: 13px; }
+  canvas { height: 131px; }
+}
+@media print {
+  header { background: var(--surface); }
+  .topbar { min-height: 32px; }
+  .brand { font-size: 17px; }
+  .masthead .intro { background: transparent; color: var(--ink); padding: 0 0 8px; }
+  .intro h1 { font-size: 28px; }
+  .intro .college, .intro .sub, .intro .tag { color: var(--muted); }
+  main.wrap { padding-top: 0; }
+  .filterbar, .kpis, .alert { margin-bottom: 7px; }
+  .kpis, .charts > .panel { padding: 8px 10px; }
+  .card .value { font-size: 25px; }
+  .portal-charts, .charts { gap: 8px; }
+  .portal-charts section + section { padding-top: 8px; }
+  .charts > :last-child { grid-column: auto; }
+  canvas { height: 115px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap topbar">
+    <div class="brand">CICSight</div>
+    <button class="print" id="print" type="button">Print dashboard</button>
+  </div>
+  <div class="wrap masthead"><div class="intro">
+    <div><p class="college">College of Informatics and Computing Sciences</p><h1>Dean’s Academic Dashboard</h1><p class="sub">Academic performance and teaching effectiveness through proposed Portal–SETE integration</p></div>
+    <span class="tag">Sample Data</span>
+  </div></div>
+</header>
+<main class="wrap">
+
+  <div class="filterbar" role="group" aria-label="Reporting filters">
+    <label>Academic year<select id="year"></select><span class="print-scope" id="year-print"></span></label>
+    <label>Semester<select id="semester"></select><span class="print-scope" id="semester-print"></span></label>
+    <label>Program<select id="program"></select><span class="print-scope" id="program-print"></span></label>
+  </div>
+  <section id="kpis" class="kpis" aria-label="Key performance indicators"></section>
+  <section id="alerts" class="alert" aria-label="Review alerts" aria-live="polite"></section>
+
+  <section class="charts" aria-label="Charts">
+    <article class="panel portal-charts" aria-label="Academic performance">
+      <section>
+        <h2 id="enrollment-title">Enrollment vs. Available Seats</h2>
+        <p class="chart-note">Headcount at enrollment census</p>
+        <div class="legend"><span><i class="chip" aria-hidden="true"></i>Enrolled</span><span><i class="chip capacity" aria-hidden="true"></i>Available seats</span></div>
+        <div id="enrollment-chart"></div>
+      </section>
+      <section>
+        <h2 id="pass-title">Course Pass Rate</h2>
+        <p class="chart-note">Share of final pass or fail grades</p>
+        <div class="legend"><span><i class="chip threshold" aria-hidden="true"></i>85% review threshold</span></div>
+        <div id="pass-chart"></div>
+      </section>
+    </article>
+    <article class="panel">
+      <h2>Average SETE Rating by Semester</h2>
+      <p class="chart-note">All sample terms for the selected program scope. Scale 1–5.</p>
+      <label class="sete-dimension">SETE dimension<select id="dimension"></select><span class="print-scope" id="dimension-print"></span></label>
+      <canvas id="trend" aria-hidden="true"></canvas>
+      <ol id="trend-values" class="trend-values" aria-label="SETE ratings and submitted evaluations by term"></ol>
+    </article>
+  </section>
+  <footer>
+    <p><strong>Sources:</strong> Fictional Student and Faculty Portal records and Student Evaluation of Teaching Effectiveness (SETE) summaries. Integration is proposed.</p>
+    <p><strong>Interpretation:</strong> Review SETE ratings alongside participation, course context, and other evidence such as peer observations. The Dean’s view contains college and program aggregates. Targets and thresholds are illustrative.</p>
+  </footer>
+</main>
+<script>
+"use strict";
+
+// Each course row contains [seats, enrolled, passed, failed, withdrew].
+const programs = {
+  bsit: { name: "BS Information Technology", courses: ["IT 101", "IT 102", "IT 103"] },
+  bscs: { name: "BS Computer Science", courses: ["CS 101", "CS 102", "CS 103"] }
+};
+const dimensions = ["Instructional Clarity", "Student Engagement", "Assessment Feedback"];
+// Each SETE summary contains [eligible evaluations, submitted evaluations, rating-point totals by dimension].
+// The sample assumes one valid rating per dimension for every submitted evaluation.
+const terms = [
+  {
+    year: "2024–2025", semester: "2nd Semester", short: "AY 24–25 · S2",
+    bsit: { courses: [[70, 63, 54, 6, 3], [65, 59, 50, 6, 3], [65, 62, 56, 5, 1]], sete: [184, 138, [596, 573, 548]] },
+    bscs: { courses: [[70, 60, 53, 4, 3], [65, 59, 53, 4, 2], [65, 58, 52, 5, 1]], sete: [177, 125, [533, 521, 504]] }
+  },
+  {
+    year: "2025–2026", semester: "1st Semester", short: "AY 25–26 · S1",
+    bsit: { courses: [[70, 65, 56, 6, 3], [65, 60, 54, 4, 2], [65, 65, 58, 5, 2]], sete: [190, 144, [634, 595, 588]] },
+    bscs: { courses: [[70, 61, 51, 6, 4], [65, 62, 52, 7, 3], [65, 59, 50, 5, 4]], sete: [182, 128, [532, 522, 513]] }
+  },
+  {
+    year: "2025–2026", semester: "2nd Semester", short: "AY 25–26 · S2",
+    bsit: { courses: [[70, 66, 55, 7, 4], [65, 62, 46, 11, 5], [65, 56, 43, 9, 4]], sete: [184, 107, [467, 449, 426]] },
+    bscs: { courses: [[70, 66, 58, 5, 3], [65, 62, 54, 5, 3], [65, 60, 53, 5, 2]], sete: [188, 144, [628, 598, 584]] }
+  }
+];
+const byId = (id) => document.getElementById(id);
+const controls = Object.fromEntries(["year", "semester", "program", "dimension"].map((id) => [id, byId(id)]));
+const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+const ratio = (count, total) => total > 0 ? count / total : null;
+const percent = (value) => value === null ? "No data" : number.format(value * 100) + "%";
+const rating = (value) => value === null ? "No data" : value.toFixed(2) + "/5";
+const sum = (values) => values.reduce((total, value) => total + value, 0);
+
+function setOptions(select, items, selected) {
+  select.replaceChildren(...items.map(([value, label]) => new Option(label, value)));
+  select.value = items.some(([value]) => value === selected) ? selected : items.at(-1)[0];
+}
+
+function updateSemesters() {
+  const available = terms.filter((term) => term.year === controls.year.value);
+  setOptions(controls.semester, available.map((term) => [term.semester, term.semester]), controls.semester.value);
+}
+
+function summarize(record) {
+  const [seats, enrolled, passed, failed, withdrew] = sumCourseRows(record.courses);
+  const [eligible, submitted, points] = record.sete;
+  return {
+    fill: ratio(enrolled, seats), pass: ratio(passed, passed + failed), withdrawal: ratio(withdrew, enrolled),
+    average: ratio(sum(points), submitted * dimensions.length), response: ratio(submitted, eligible),
+    seats, enrolled, passed, graded: passed + failed, withdrew, eligible, submitted
+  };
+}
+
+function sumCourseRows(rows) {
+  return [0, 1, 2, 3, 4].map((index) => sum(rows.map((row) => row[index])));
+}
+
+function selectRecord(term) {
+  if (controls.program.value !== "all") return term[controls.program.value];
+  const records = Object.keys(programs).map((id) => term[id]);
+  return {
+    courses: records.map((record) => sumCourseRows(record.courses)),
+    sete: [
+      sum(records.map((record) => record.sete[0])),
+      sum(records.map((record) => record.sete[1])),
+      dimensions.map((_, index) => sum(records.map((record) => record.sete[2][index])))
+    ]
+  };
+}
+
+function renderMetrics(summary, term) {
+  const { fill, pass, withdrawal, average, response, seats, enrolled, passed, graded, withdrew, eligible, submitted } = summary;
+  const cards = [
+    ["Enrollment Fill Rate", "Portal", fill, percent(fill), "90–100%", fill >= .90 && fill <= 1, enrolled + " enrolled / " + seats + " seats"],
+    ["Course Pass Rate", "Portal", pass, percent(pass), "≥90%", pass >= .90, passed + " passed / " + graded + " graded"],
+    ["Course Withdrawal Rate", "Portal", withdrawal, percent(withdrawal), "≤5%", withdrawal <= .05, withdrew + " withdrew / " + enrolled + " enrolled"],
+    ["Average SETE Rating", "SETE", average, rating(average), "≥4.00/5", average >= 4, submitted + " submitted evaluations"],
+    ["SETE Response Rate", "SETE", response, percent(response), "≥70%", response >= .70, submitted + " submitted / " + eligible + " eligible"]
+  ];
+  byId("kpis").innerHTML = cards.map(([label, source, raw, formatted, target, met, context]) => {
+    const status = raw === null ? "No target status" : met ? "At target" : "Outside target";
+    const style = raw === null ? " none" : met ? "" : " review";
+    return '<article class="card"><h2>' + label + '</h2><span class="source">' + source + '</span><p class="value">' + formatted +
+      '</p><span class="state' + style + '">' + status + '</span><span class="context">Target ' + target +
+      '</span><span class="context">' + context + '</span></article>';
+  }).join("");
+
+  const collegeView = controls.program.value === "all";
+  const scopes = collegeView
+    ? [["College", summary], ...Object.entries(programs).map(([id, program]) => [program.name, summarize(term[id])])]
+    : [[programs[controls.program.value].name, summary]];
+  const warnings = scopes.flatMap(([label, stats]) => {
+    const items = [];
+    if (stats.pass !== null && stats.pass < .85) {
+      items.push(label + " pass rate is " + percent(stats.pass) + " (below 85%). Review course outcomes and tutoring needs.");
+    }
+    if (stats.response !== null && stats.response < .60) {
+      items.push(label + " SETE response rate is " + percent(stats.response) + " (below 60%). Review participation before interpreting ratings.");
+    }
+    return items;
+  });
+  const alert = byId("alerts");
+  alert.classList.toggle("clear", warnings.length === 0);
+  alert.innerHTML = warnings.length
+    ? "<strong>Review recommended</strong><ul>" + warnings.map((warning) => "<li>" + warning + "</li>").join("") + "</ul>"
+    : "<strong>No active threshold alerts</strong><p>Review thresholds are 85% for course pass rate and 60% for SETE response rate.</p>";
+}
+
+function renderCourseCharts(record, courseNames) {
+  const maximum = Math.ceil(Math.max(1, ...record.courses.flatMap((row) => row.slice(0, 2))) / 10) * 10;
+  byId("enrollment-chart").innerHTML = record.courses.map(([seats, enrolled], i) =>
+    '<div class="course-row"><strong>' + courseNames[i] + '</strong><div class="track" aria-hidden="true"><div class="fill" style="--amount:' +
+    (enrolled / maximum * 100) + '%"></div><div class="fill capacity" style="--amount:' + (seats / maximum * 100) +
+    '%"></div></div><span aria-label="' + enrolled + ' enrolled of ' + seats + ' available seats">' + enrolled + ' / ' + seats + '</span></div>'
+  ).join("") + '<div class="axis" aria-hidden="true"><span>0</span><span>' + maximum + ' students</span></div>';
+
+  byId("pass-chart").innerHTML = record.courses.map(([, , passed, failed], i) => {
+    const rate = ratio(passed, passed + failed);
+    const rowClass = rate !== null && rate < .85 ? "course-row below" : "course-row";
+    return '<div class="' + rowClass + '"><strong>' + courseNames[i] + '</strong><div class="track pass" aria-hidden="true"><div class="fill" style="--amount:' +
+      ((rate ?? 0) * 100) + '%"></div></div><span>' +
+      percent(rate) + '</span></div>';
+  }).join("") + '<div class="axis" aria-hidden="true"><span>0%</span><span>100%</span></div>';
+}
+
+function renderTrend() {
+  const index = dimensions.indexOf(controls.dimension.value);
+  const series = terms.map((term) => {
+    const [eligible, submitted, points] = selectRecord(term).sete;
+    const total = index === -1 ? sum(points) : points[index];
+    return { label: term.short, score: ratio(total, submitted * (index === -1 ? dimensions.length : 1)), submitted, response: ratio(submitted, eligible) };
+  });
+  byId("trend-values").innerHTML = series.map((term) =>
+    '<li><strong>' + term.label + '</strong><span>' + rating(term.score) + '</span><small>' + term.submitted +
+    ' responses · ' + percent(term.response) + '</small></li>'
+  ).join("");
+
+  const canvas = byId("trend");
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  if (!width || !height) return;
+  const density = window.devicePixelRatio || 1;
+  canvas.width = Math.round(width * density);
+  canvas.height = Math.round(height * density);
+  const ctx = canvas.getContext("2d");
+  const palette = getComputedStyle(canvas);
+  ctx.scale(density, density);
+  const y = (score) => 9 + (5 - score) * (height - 19) / 4;
+  ctx.font = "10px Segoe UI, sans-serif";
+  for (let score = 1; score <= 5; score++) {
+    const row = y(score);
+    ctx.fillStyle = palette.getPropertyValue("--muted").trim();
+    ctx.fillText(String(score), 0, row + 3);
+    ctx.strokeStyle = palette.getPropertyValue("--rule").trim();
+    ctx.beginPath();
+    ctx.moveTo(15, row);
+    ctx.lineTo(width - 1, row);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = palette.getPropertyValue("--navy").trim();
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.lineWidth = 2.5;
+  const points = series.map((term, i) => ({ x: width * (i + .5) / series.length, y: term.score === null ? null : y(term.score) }));
+  ctx.beginPath();
+  let active = false;
+  for (const point of points) {
+    if (point.y === null) { active = false; continue; }
+    if (active) ctx.lineTo(point.x, point.y);
+    else ctx.moveTo(point.x, point.y);
+    active = true;
+  }
+  ctx.stroke();
+  for (const point of points) {
+    if (point.y === null) continue;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+}
+
+function renderDashboard() {
+  for (const [name, select] of Object.entries(controls)) byId(name + "-print").textContent = select.selectedOptions[0].textContent;
+  const term = terms.find((item) => item.year === controls.year.value && item.semester === controls.semester.value);
+  const record = selectRecord(term);
+  const collegeView = controls.program.value === "all";
+  byId("enrollment-title").textContent = "Enrollment vs. Available Seats by " + (collegeView ? "Program" : "Course");
+  byId("pass-title").textContent = "Course Pass Rate by " + (collegeView ? "Program" : "Course");
+  renderMetrics(summarize(record), term);
+  const labels = collegeView ? Object.keys(programs).map((id) => id.toUpperCase()) : programs[controls.program.value].courses;
+  renderCourseCharts(record, labels);
+  renderTrend();
+}
+
+const years = [...new Set(terms.map((term) => term.year))];
+setOptions(controls.year, years.map((year) => [year, year]), years.at(-1));
+updateSemesters();
+setOptions(controls.program, [["all", "All CICS programs"], ...Object.entries(programs).map(([id, program]) => [id, program.name])], "all");
+setOptions(controls.dimension, ["Overall", ...dimensions].map((label) => [label, label]), "Overall");
+controls.year.addEventListener("change", () => { updateSemesters(); renderDashboard(); });
+controls.semester.addEventListener("change", renderDashboard);
+controls.program.addEventListener("change", renderDashboard);
+controls.dimension.addEventListener("change", () => {
+  byId("dimension-print").textContent = controls.dimension.value;
+  renderTrend();
+});
+byId("print").addEventListener("click", () => window.print());
+window.addEventListener("beforeprint", renderTrend);
+new ResizeObserver(renderTrend).observe(byId("trend"));
+renderDashboard();
+</script>
+</body>
+</html>
